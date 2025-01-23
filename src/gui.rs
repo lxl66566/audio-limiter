@@ -1,9 +1,11 @@
 use atomic_float::AtomicF32;
 use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
-use eframe::egui::{self, InnerResponse, Layout, Ui};
+use eframe::egui::{self, FontDefinitions, FontFamily, InnerResponse, Layout, Ui};
 use eframe::emath::Align;
+use std::path::Path;
 use std::sync::atomic::Ordering;
+use sys_locale::get_locale;
 
 use crate::streaming::{create_stream, get_devices};
 
@@ -148,6 +150,28 @@ pub fn run() -> Result<(), eframe::Error> {
     options,
     Box::new(|cc| {
       cc.egui_ctx.set_pixels_per_point(2.0);
+
+      // The default font is not supported for Chinese, so we set the font to support Chinese on which the system's locale is zh
+      let locale = get_locale().unwrap_or_default();
+      if locale.starts_with("zh") {
+        let mut fonts = FontDefinitions::default();
+        let font_folder = Path::new("C:\\Windows\\Fonts");
+        let font_tries = ["msyh.ttc", "simsun.ttc", "simhei.ttf"];
+        for font_name in font_tries {
+          let font_path = font_folder.join(font_name);
+          if let Ok(font_data) = std::fs::read(font_path) {
+            fonts.font_data.insert(
+              font_name.to_string(),
+              egui::FontData::from_owned(font_data).into(),
+            );
+            if let Some(family) = fonts.families.get_mut(&FontFamily::Proportional) {
+              family.insert(0, font_name.to_string());
+              break;
+            }
+          }
+        }
+        cc.egui_ctx.set_fonts(fonts);
+      }
 
       let app_data = AppData {
         devices: get_devices(),
