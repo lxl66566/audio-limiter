@@ -42,6 +42,7 @@ pub fn create_stream(
   let (mut producer, mut consumer) = ring.split();
 
   for _ in 0..latency_samples {
+    // The ring buffer has twice as much space as necessary to add latency here, so this should never fail
     producer.try_push(0.0).unwrap();
   }
 
