@@ -8,6 +8,9 @@ eframe = "0.30"
 cpal = "0.15"
 ringbuf = "0.4"
 atomic_float = "1.1.0"
+config-file2 = "0.4.0"
+directories = "6.0.0"
+serde = "1.0.217"
 sys-locale = "0.3.2"
 
 [profile.release]
