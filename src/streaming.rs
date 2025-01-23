@@ -2,6 +2,7 @@ use cpal::{
   traits::{DeviceTrait, HostTrait, StreamTrait},
   Device, Stream,
 };
+use ringbuf::traits::{Consumer as _, Producer as _, Split as _};
 use std::sync::atomic::Ordering;
 
 use crate::{
@@ -37,11 +38,11 @@ pub fn create_stream(
   let latency_frames = (latency / 1000.0) * input_config.sample_rate.0 as f32;
   let latency_samples = latency_frames as usize * input_config.channels as usize;
 
-  let ring = ringbuf::RingBuffer::new(latency_samples * 2);
+  let ring = Box::new(ringbuf::HeapRb::new(latency_samples * 2));
   let (mut producer, mut consumer) = ring.split();
 
   for _ in 0..latency_samples {
-    producer.push(0.0).unwrap(); // The ring buffer has twice as much space as necessary to add latency here, so this should never fail
+    producer.try_push(0.0).unwrap();
   }
 
   let input_data_fn = move |data: &[f32], _: &cpal::InputCallbackInfo| {
@@ -50,7 +51,7 @@ pub fn create_stream(
     for &sample in data {
       let compressed = comp.compress(sample);
 
-      if producer.push(compressed).is_err() {
+      if producer.try_push(compressed).is_err() {
         // eprintln!("Output stream fell behind: try increasing latency");
       }
     }
@@ -58,15 +59,15 @@ pub fn create_stream(
 
   let output_data_fn = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
     for sample in data {
-      *sample = consumer.pop().unwrap_or(0.0);
+      *sample = consumer.try_pop().unwrap_or(0.0);
     }
   };
 
   let input_stream = input_device
-    .build_input_stream(&input_config, input_data_fn, err_fn)
+    .build_input_stream(&input_config, input_data_fn, err_fn, None)
     .expect("Error building input stream");
   let output_stream = output_device
-    .build_output_stream(&output_config, output_data_fn, err_fn)
+    .build_output_stream(&output_config, output_data_fn, err_fn, None)
     .expect("Error building output stream");
 
   input_stream.play().expect("Could not play input stream");

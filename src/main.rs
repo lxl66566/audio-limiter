@@ -4,6 +4,7 @@ mod compressor;
 mod gui;
 mod streaming;
 
-fn main() {
-  gui::run();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+  gui::run()?;
+  Ok(())
 }

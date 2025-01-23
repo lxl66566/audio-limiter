@@ -44,7 +44,7 @@ fn create_combo_box(
 
   ui.label(label);
 
-  let combo = egui::ComboBox::from_id_source(label)
+  let combo = egui::ComboBox::from_id_salt(label)
     .width(ui.available_width() - 7.0)
     .selected_text(device_name)
     .show_ui(ui, |ui| {
@@ -108,8 +108,8 @@ impl AppData {
       &self.devices,
       &mut self.output_device_idx,
     );
-
     ui.label("Threshold");
+
     ui.add(egui::Slider::new(&mut self.threshold, -200.0..=0.0).max_decimals(0));
     ui.end_row();
     if ui.button("🔄 Refresh devices").clicked() {
@@ -121,26 +121,26 @@ impl AppData {
 impl eframe::App for AppData {
   fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
     egui::CentralPanel::default().show(ctx, |ui| {
-      ui.spacing_mut().slider_width = ui.available_width() - 138.0;
-
-      ui.with_layout(Layout::top_down_justified(Align::default()), |ui| {
-        egui::Grid::new("app_grid")
-          .num_columns(2)
-          .spacing([10.0, 10.0])
-          .show(ui, |ui| {
-            self.draw_interface(ui);
-
-            ui.label("");
-            ui.with_layout(Layout::right_to_left(), |ui| {
-              self.draw_start_stop_button(ui);
+      ui.spacing_mut().slider_width = (ui.available_width() - 175.0).max(3.0);
+      egui::ScrollArea::vertical().show(ui, |ui| {
+        ui.with_layout(Layout::top_down_justified(Align::default()), |ui| {
+          egui::Grid::new("app_grid")
+            .num_columns(2)
+            .spacing([10.0, 10.0])
+            .min_col_width(100.0)
+            .show(ui, |ui| {
+              self.draw_interface(ui);
+              ui.with_layout(Layout::right_to_left(Align::default()), |ui| {
+                self.draw_start_stop_button(ui);
+              });
             });
-          });
+        });
       });
     });
   }
 }
 
-pub fn run() {
+pub fn run() -> Result<(), eframe::Error> {
   let options = eframe::NativeOptions::default();
 
   eframe::run_native(
@@ -159,7 +159,7 @@ pub fn run() {
         output_stream: None,
       };
 
-      Box::new(app_data)
+      Ok(Box::new(app_data))
     }),
-  );
+  )
 }
